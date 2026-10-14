@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Focs</string>
+    <string name="blocker_service_label">Focs app blocker</string>
+    <string name="blocker_service_description">Focs uses this only to see which app is open, so it can close apps that have used up their daily time limit or that you blocked during focus mode. It does not read anything on your screen.</string>
+</resources>

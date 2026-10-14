@@ -16,9 +16,26 @@ android {
         versionName = "0.1"
     }
 
+    // Release signing comes from env vars set by CI (GitHub secrets). Without them the
+    // release build falls back to the debug key so it can still be installed.
+    val keystorePath = System.getenv("FOCS_KEYSTORE_PATH")
+    signingConfigs {
+        if (keystorePath != null) {
+            create("release") {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("FOCS_KEYSTORE_PASSWORD")
+                keyAlias = "focs"
+                keyPassword = System.getenv("FOCS_KEYSTORE_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
     compileOptions {

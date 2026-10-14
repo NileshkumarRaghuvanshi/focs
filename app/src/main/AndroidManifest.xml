@@ -11,6 +11,9 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Lets the block wall appear over an app that's out of time. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- Needed to list the launchable apps on Android 11+. -->
     <queries>
@@ -44,19 +47,24 @@
             android:launchMode="singleTask"
             android:taskAffinity="com.focs.app.block" />
 
-        <!-- Watches which app is in front and sends you home when it's over its limit. -->
+        <!-- Watches which app is in front and shows the block wall when it's over its limit. -->
         <service
             android:name=".block.BlockerService"
             android:exported="false"
-            android:label="@string/blocker_service_label"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/blocker_service_config" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Enforces the daily app time limits the user set, by showing a block screen when one runs out" />
         </service>
+
+        <receiver
+            android:name=".block.BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <!-- Keeps the focus countdown alive and ends focus mode on time. -->
         <service

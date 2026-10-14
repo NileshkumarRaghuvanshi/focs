@@ -21,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.focs.app.block.BlockerService
 import com.focs.app.focus.FocusManager
 import com.focs.app.ui.FocsTheme
 import com.focs.app.ui.FocusScreen
@@ -82,6 +83,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         FocusManager.endIfExpired(this)
+        BlockerService.startIfReady(this)
         refresh++
     }
 

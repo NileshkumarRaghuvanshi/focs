@@ -2,6 +2,7 @@ package com.focs.app.ui
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -55,7 +56,7 @@ fun LimitsScreen(refresh: Int, modifier: Modifier = Modifier) {
     var query by remember { mutableStateOf("") }
 
     val hasUsage = remember(refresh) { UsageTracker.hasAccess(ctx) }
-    val hasBlocker = remember(refresh) { BlockerService.isEnabled(ctx) }
+    val hasBlocker = remember(refresh) { BlockerService.canShowWall(ctx) }
 
     val rows by produceState<List<AppEntry>?>(null, refresh, version) {
         value = withContext(Dispatchers.IO) { loadRows(ctx) }
@@ -85,10 +86,14 @@ fun LimitsScreen(refresh: Int, modifier: Modifier = Modifier) {
         }
         if (!hasBlocker) item {
             PermissionCard(
-                "Turn on the Focs app blocker",
-                "In Accessibility, open Focs app blocker and switch it on. This is what closes apps when time's up.",
-                "Open",
-            ) { ctx.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+                "Allow display over other apps",
+                "This is how Focs puts the block screen over an app when its time is up.",
+                "Allow",
+            ) {
+                ctx.startActivity(
+                    Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}"))
+                )
+            }
         }
         item {
             OutlinedTextField(

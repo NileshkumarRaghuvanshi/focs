@@ -8,6 +8,8 @@ An Android app that keeps you off time-wasting apps and helps you push through l
 
 **2. Focus mode.** Pick a duration and start. A big countdown shows the time left (also in the notification shade). Do Not Disturb switches to priority-only: every notification is silenced and hidden, except calls from your **starred contacts**, **anyone who calls twice within 15 minutes**, and alarms. All your limited apps are blocked completely until the timer ends. Your previous DND setup is restored afterwards. Ending early is possible, but only after a 10-second pause looking at one of your goals.
 
+**Lock-screen timer.** During focus, a glowing rainbow countdown ring shows over your lock screen every time the screen turns off, so waking the phone shows the timer first. Optionally Focs can lock the phone the moment focus starts (turn on "Lock phone when focus starts"; this asks for device-admin permission, used only to lock the screen. To uninstall Focs later, turn that switch off or remove it under Settings > Security > Device admin apps first).
+
 **3. Motivation.** Add your own goal one-liners on the Goals tab. Tap "I'm feeling lazy" during focus mode to see one of your goals or one of 30 built-in lines. Goals also appear on the block wall and the quit dialog.
 
 ## Setup on the phone (one time)

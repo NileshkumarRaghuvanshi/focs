@@ -6,6 +6,7 @@ import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +17,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -35,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.focs.app.data.Quotes
 import com.focs.app.data.Store
+import com.focs.app.focus.FocsAdminReceiver
 import com.focs.app.focus.FocusManager
 import kotlinx.coroutines.delay
 
@@ -80,6 +86,8 @@ fun FocusScreen(refresh: Int, modifier: Modifier = Modifier) {
 private fun StartFocus(refresh: Int, modifier: Modifier, onStart: (Int) -> Unit) {
     val ctx = LocalContext.current
     val hasDnd = remember(refresh) { FocusManager.hasDndAccess(ctx) }
+    val hasAdmin = remember(refresh) { FocsAdminReceiver.isActive(ctx) }
+    var lockOnStart by remember { mutableStateOf(Store.lockOnStart(ctx)) }
     var minutes by remember { mutableFloatStateOf(45f) }
     val m = minutes.toInt()
 
@@ -107,7 +115,7 @@ private fun StartFocus(refresh: Int, modifier: Modifier, onStart: (Int) -> Unit)
         Column(Modifier.padding(16.dp)) {
             Text("$m minutes", style = MaterialTheme.typography.displaySmall)
             Spacer(Modifier.height(8.dp))
-            androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(25, 45, 60, 90).forEach { preset ->
                     FilterChip(
                         selected = m == preset,
@@ -120,6 +128,25 @@ private fun StartFocus(refresh: Int, modifier: Modifier, onStart: (Int) -> Unit)
             Spacer(Modifier.height(16.dp))
             Button(onClick = { onStart(m) }, modifier = Modifier.fillMaxWidth().height(56.dp)) {
                 Text("Start focusing", style = MaterialTheme.typography.titleMedium)
+            }
+            Spacer(Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Lock phone when focus starts", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        "Your screen locks and the timer shows on the lock screen.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = lockOnStart && hasAdmin,
+                    onCheckedChange = { on ->
+                        lockOnStart = on
+                        Store.setLockOnStart(ctx, on)
+                        if (on && !hasAdmin) ctx.startActivity(FocsAdminReceiver.activationIntent(ctx))
+                    },
+                )
             }
             Spacer(Modifier.height(24.dp))
             Text("Who counts as important?", style = MaterialTheme.typography.titleSmall)
@@ -138,55 +165,56 @@ private fun StartFocus(refresh: Int, modifier: Modifier, onStart: (Int) -> Unit)
 @Composable
 private fun ActiveFocus(start: Long, end: Long, now: Long, modifier: Modifier, onQuit: () -> Unit) {
     val ctx = LocalContext.current
-    val remaining = (end - now).coerceAtLeast(0)
-    val total = (end - start).coerceAtLeast(1)
     var nudge by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
     var askingToQuit by remember { mutableStateOf(false) }
 
-    Column(
-        modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Spacer(Modifier.height(24.dp))
-        Box(contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(
-                progress = { remaining / total.toFloat() },
-                modifier = Modifier.size(260.dp),
-                strokeWidth = 10.dp,
-            )
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(formatClock(remaining), fontSize = 56.sp, fontWeight = FontWeight.Light)
-                Text("left", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        Spacer(Modifier.height(32.dp))
+    FocusBackdrop(modifier) {
+        Column(
+            Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Spacer(Modifier.height(24.dp))
+            FancyTimer(end - now, end - start)
+            Spacer(Modifier.height(32.dp))
 
-        val shown = nudge
-        if (shown == null) {
-            Button(onClick = { nudge = Quotes.nudge(ctx) }, modifier = Modifier.fillMaxWidth().height(56.dp)) {
-                Text("I'm feeling lazy", style = MaterialTheme.typography.titleMedium)
-            }
-        } else {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    if (shown.second) {
-                        Text("Your goal", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.height(4.dp))
+            val shown = nudge
+            if (shown == null) {
+                Button(
+                    onClick = { nudge = Quotes.nudge(ctx) },
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF4FD8), contentColor = Color.White),
+                ) {
+                    Text("I'm feeling lazy", style = MaterialTheme.typography.titleMedium)
+                }
+            } else {
+                Card(
+                    Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.10f)),
+                ) {
+                    Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        if (shown.second) {
+                            Text("Your goal", style = MaterialTheme.typography.labelLarge, color = Color(0xFFFFD166))
+                            Spacer(Modifier.height(4.dp))
+                        }
+                        Text(
+                            "\u201C${shown.first}\u201D",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontStyle = FontStyle.Italic,
+                            textAlign = TextAlign.Center,
+                            color = Color.White,
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        TextButton(onClick = { nudge = Quotes.nudge(ctx) }) { Text("Another one", color = Color.White) }
+                        TextButton(onClick = { nudge = null }) { Text("OK, back to work", color = Color.White) }
                     }
-                    Text(
-                        "“${shown.first}”",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontStyle = FontStyle.Italic,
-                        textAlign = TextAlign.Center,
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    TextButton(onClick = { nudge = Quotes.nudge(ctx) }) { Text("Another one") }
-                    TextButton(onClick = { nudge = null }) { Text("OK, back to work") }
                 }
             }
+            Spacer(Modifier.height(48.dp))
+            OutlinedButton(
+                onClick = { askingToQuit = true },
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White.copy(alpha = 0.7f)),
+            ) { Text("End early") }
         }
-        Spacer(Modifier.height(48.dp))
-        OutlinedButton(onClick = { askingToQuit = true }) { Text("End early") }
     }
 
     if (askingToQuit) QuitDialog(onStay = { askingToQuit = false }, onQuit = { askingToQuit = false; onQuit() })
@@ -221,12 +249,4 @@ private fun QuitDialog(onStay: () -> Unit, onQuit: () -> Unit) {
             }
         },
     )
-}
-
-private fun formatClock(ms: Long): String {
-    val s = (ms + 999) / 1000
-    val h = s / 3600
-    val m = (s % 3600) / 60
-    val sec = s % 60
-    return if (h > 0) "%d:%02d:%02d".format(h, m, sec) else "%02d:%02d".format(m, sec)
 }

@@ -27,6 +27,7 @@ object FocusManager {
         Store.setFocus(ctx, now, now + minutes * 60_000L)
         enableDnd(ctx)
         ContextCompat.startForegroundService(ctx, Intent(ctx, FocusService::class.java))
+        if (Store.lockOnStart(ctx)) FocsAdminReceiver.lockNow(ctx)
     }
 
     fun stop(ctx: Context) {

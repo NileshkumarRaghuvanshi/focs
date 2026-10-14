@@ -99,6 +99,9 @@ object Store {
 
     // ---- Focus session ----
 
+    fun lockOnStart(ctx: Context): Boolean = prefs(ctx).getBoolean("lock_on_start", false)
+    fun setLockOnStart(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean("lock_on_start", on).apply()
+
     fun focusStart(ctx: Context): Long = prefs(ctx).getLong(KEY_FOCUS_START, 0)
     fun focusEnd(ctx: Context): Long = prefs(ctx).getLong(KEY_FOCUS_END, 0)
 

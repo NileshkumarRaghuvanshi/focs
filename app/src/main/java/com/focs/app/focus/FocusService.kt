@@ -5,11 +5,15 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import com.focs.app.MainActivity
@@ -22,6 +26,19 @@ class FocusService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private val finish = Runnable { FocusManager.stop(this) }
 
+    /** Whenever the screen goes off mid-session, put the timer over the lock screen. */
+    private val screenOff = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (FocusManager.isActive(context) && Settings.canDrawOverlays(context)) {
+                startActivity(
+                    Intent(context, FocusLockActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                )
+            }
+        }
+    }
+    private var receiverRegistered = false
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -31,6 +48,10 @@ class FocusService : Service() {
             this, NOTIFICATION_ID, buildNotification(end),
             ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
         )
+        if (!receiverRegistered) {
+            registerReceiver(screenOff, IntentFilter(Intent.ACTION_SCREEN_OFF))
+            receiverRegistered = true
+        }
         handler.removeCallbacks(finish)
         val remaining = end - System.currentTimeMillis()
         if (remaining <= 0) {
@@ -43,6 +64,10 @@ class FocusService : Service() {
 
     override fun onDestroy() {
         handler.removeCallbacks(finish)
+        if (receiverRegistered) {
+            unregisterReceiver(screenOff)
+            receiverRegistered = false
+        }
         super.onDestroy()
     }
 

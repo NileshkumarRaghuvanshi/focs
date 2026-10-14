@@ -66,6 +66,28 @@
             </intent-filter>
         </receiver>
 
+        <!-- Focus timer shown over the lock screen. -->
+        <activity
+            android:name=".focus.FocusLockActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:showWhenLocked="true"
+            android:taskAffinity="com.focs.app.lock" />
+
+        <!-- Optional: lets Focs lock the screen when a focus session starts. -->
+        <receiver
+            android:name=".focus.FocsAdminReceiver"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Keeps the focus countdown alive and ends focus mode on time. -->
         <service
             android:name=".focus.FocusService"
